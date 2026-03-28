@@ -37,4 +37,9 @@ az ad sp create-for-rbac \
     4. deploy
         helm upgrade --install interviewapp ./helm/interview-app
         
+# cold start warm up issue (agar endpoint respond nhi kr ra hai)
+    Run in terminal
+    ----------------
+    curl http://20.204.187.67/api/test
+        
 ```
