@@ -87,6 +87,7 @@ az ad sp create-for-rbac \
               
              
         
-
+# to get ingress ip 
+    kubectl get svc -n ingress-nginx
         
 ```
