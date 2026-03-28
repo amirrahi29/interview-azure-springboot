@@ -41,5 +41,14 @@ az ad sp create-for-rbac \
     Run in terminal
     ----------------
     curl http://20.204.187.67/api/test
+    
+# rollback previous deployment
+     helm rollback interviewapp
+     
+# check diployment hostory with app version
+    helm history interviewapp
+    
+# rollback any deployment by version
+    helm rollback interviewapp  1.16.0
         
 ```
