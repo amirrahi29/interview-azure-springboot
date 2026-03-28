@@ -2,12 +2,12 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: interviewapp-ingress
-  namespace: prod
+  namespace: {{ .Values.env }}
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
 
 spec:
-  ingressClassName: nginx   # 👈 THIS IS THE FIX
+  ingressClassName: nginx
 
   rules:
     - http:
