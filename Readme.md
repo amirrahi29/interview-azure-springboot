@@ -50,5 +50,43 @@ az ad sp create-for-rbac \
     
 # rollback any deployment by version
     helm rollback interviewapp  1.16.0
+    
+# get pods by env name when on namespaces
+    kubectl get pods -n dev
+    kubectl get pods -n staging
+    kubectl get pods -n uat
+    kubectl get pods -n prod
+    
+# set any env as default then all command will work related to env
+    kubectl config set-context --current --namespace=dev
+    
+    
+    
+# ingress
+    1. install ingress on AKS cluster for all environments 
+    
+        this command will execute only once
+        --------------------------------------
+            helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+            
+            helm repo update
+            
+            helm install nginx ingress-nginx/ingress-nginx \
+              --namespace ingress-nginx \
+              --create-namespace
+              
+            kubectl get pods -n ingress-nginx
+            
+            expected
+            ---------
+            nginx-ingress-controller-xxxxx   Running
+            
+            get ip address of particular env
+            --------------------------------
+            kubectl get svc -n ingress-nginx
+              
+             
+        
+
         
 ```
