@@ -1,0 +1,88 @@
+name: Build and Deploy to AKS
+
+on:
+  push:
+    branches:
+      - "main"
+
+# only single deployment will happen at a time, rest will cancel
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Java setup
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: gradle
+
+      # 3. Build app
+      - name: Build with Gradle
+        run: ./gradlew build
+
+      # 4. Azure Login
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # 5. ACR Login
+      - name: Login to ACR
+        run: |
+          az acr login --name rahiregistry
+
+      # 6. Build & Push Docker image
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t rahiregistry.azurecr.io/rahi-app-image:${{ github.sha }} .
+          docker push rahiregistry.azurecr.io/rahi-app-image:${{ github.sha }}
+
+      # 7. Set AKS context
+      - name: Set AKS Context
+        uses: azure/aks-set-context@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          cluster-name: RahiCluster
+          resource-group: rahi-resource
+
+      # 8. Apply Kubernetes YAML
+      - name: Deploy base manifests
+        run: |
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+          kubectl apply -f k8s/hpa.yaml
+
+      # 9. Update image (dynamic)
+      - name: Update image in AKS
+        run: |
+          kubectl set image deployment/rahiapp-deployment \
+          rahiapp=rahiregistry.azurecr.io/rahi-app-image:${{ github.sha }}
+
+      # 10. Verify rollout
+      - name: Check rollout status
+        run: |
+          kubectl rollout status deployment/rahiapp-deployment --timeout=120s
+
+      # 11. Auto rollback if failed
+      - name: Rollback if deployment fails
+        if: failure()
+        run: |
+          echo "Deployment failed. Rolling back..."
+          kubectl rollout undo deployment/rahiapp-deployment
+
+      # 12. Verify rollback
+      - name: Verify rollback
+        if: failure()
+        run: |
+          kubectl rollout status deployment/rahiapp-deployment --timeout=120s
