@@ -47,3 +47,24 @@ jobs:
         run: |
           docker build -t interviewresgistry.azurecr.io/interview-app-image:${{ github.sha }} .
           docker push interviewresgistry.azurecr.io/interview-app-image:${{ github.sha }}
+          
+      # 7. Set AKS context
+      - name: Set AKS Context
+        uses: azure/aks-set-context@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          cluster-name: InterviewCluster
+          resource-group: interview-resources
+
+      # 8. Apply Kubernetes YAML
+      - name: Deploy base manifests
+        run: |
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+          kubectl apply -f k8s/hpa.yaml
+
+      # 9. Update image (dynamic)
+      - name: Update image in AKS
+        run: |
+          kubectl set image deployment/interviewapp-deployment \
+          interviewapp=interviewresgistry.azurecr.io/interview-app-image:${{ github.sha }}

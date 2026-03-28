@@ -7,5 +7,9 @@ az ad sp create-for-rbac \
   --role Contributor \
   --scopes /subscriptions/1a0bfbdb-b9d1-4d8e-8997-f14060057ae5\
   --sdk-auth
+  
+# AKS cluster node 
+    search and set node as min 2, max 3
+    D2ds_v4
 
 ```
