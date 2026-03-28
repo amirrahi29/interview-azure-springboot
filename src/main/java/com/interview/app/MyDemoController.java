@@ -10,6 +10,6 @@ public class MyDemoController {
 
     @GetMapping("/test")
     public String data(){
-        return "my test data controller (amir rahi)";
+        return "my test data controller amir rahi";
     }
 }
