@@ -14,4 +14,7 @@ az ad sp create-for-rbac \
     
 # go to container registry and access control(IAM), add role, select member as kubernetes cluster by selecting manual radio btn.
 
+# azure login from laptop
+    az login
+
 ```

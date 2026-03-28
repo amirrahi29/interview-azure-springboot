@@ -68,3 +68,21 @@ jobs:
         run: |
           kubectl set image deployment/interviewapp-deployment \
           interviewapp=interviewresgistry.azurecr.io/interview-app-image:${{ github.sha }}
+
+      # 10. Verify rollout
+      - name: Check rollout status
+        run: |
+          kubectl rollout status deployment/interviewapp-deployment --timeout=120s
+
+      # 11. Auto rollback if failed
+      - name: Rollback if deployment fails
+        if: failure()
+        run: |
+          echo "Deployment failed. Rolling back..."
+          kubectl rollout undo deployment/interviewapp-deployment
+
+      # 12. Verify rollback
+      - name: Verify rollback
+        if: failure()
+        run: |
+          kubectl rollout status deployment/interviewapp-deployment --timeout=120s
