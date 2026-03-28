@@ -7,9 +7,9 @@ spec:
   selector:
     app: interviewapp
 
-  type: LoadBalancer
+  type: {{ .Values.service.type }}
 
   ports:
     - protocol: TCP
-      port: 80
+      port: {{ .Values.service.port }}
       targetPort: 8083

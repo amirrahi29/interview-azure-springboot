@@ -56,32 +56,25 @@ jobs:
           cluster-name: InterviewCluster
           resource-group: interview-resources
 
-      # 8. Apply Kubernetes YAML
-      - name: Deploy base manifests
+      # 8. Deploy using Helm
+      - name: Deploy with Helm
         run: |
-          kubectl apply -f k8s/deployment.yaml
-          kubectl apply -f k8s/service.yaml
-          kubectl apply -f k8s/hpa.yaml
+          helm upgrade --install interviewapp ./helm/interview-app \
+            --set image.tag=${{ github.sha }}
 
-      # 9. Update image (dynamic)
-      - name: Update image in AKS
-        run: |
-          kubectl set image deployment/interviewapp-deployment \
-          interviewapp=interviewresgistry.azurecr.io/interview-app-image:${{ github.sha }}
-
-      # 10. Verify rollout
+      # 9. Verify rollout
       - name: Check rollout status
         run: |
           kubectl rollout status deployment/interviewapp-deployment --timeout=120s
 
-      # 11. Auto rollback if failed
+      # 10. Rollback if deployment fails
       - name: Rollback if deployment fails
         if: failure()
         run: |
           echo "Deployment failed. Rolling back..."
-          kubectl rollout undo deployment/interviewapp-deployment
+          helm rollback interviewapp
 
-      # 12. Verify rollback
+      # 11. Verify rollback
       - name: Verify rollback
         if: failure()
         run: |

@@ -1,4 +1,4 @@
-```aiignore
+```
 
 # command for generating secrets for "AZURE_CREDENTIALS" github key, run in azure bash terminal
 
@@ -16,5 +16,25 @@ az ad sp create-for-rbac \
 
 # azure login from laptop
     az login
+    
+    
+# helm start from here
+    1. install 
+        helm create helm/interview-app
+    
+    output
+    ------
+        helm/interview-app/
+      ├── templates/
+      ├── values.yaml
+      ├── Chart.yaml
+    
+    2. clean if already exist
+        rm -rf helm/interview-app/templates/*
 
+    3. test
+        helm template interviewapp ./helm/interview-app
+    4. deploy
+        helm upgrade --install interviewapp ./helm/interview-app
+        
 ```
