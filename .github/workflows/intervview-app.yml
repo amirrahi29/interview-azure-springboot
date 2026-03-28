@@ -40,49 +40,10 @@ jobs:
       # 5. ACR Login
       - name: Login to ACR
         run: |
-          az acr login --name rahiregistry
+          az acr login --name InterviewResgistry
 
       # 6. Build & Push Docker image
       - name: Build and Push Docker Image
         run: |
-          docker build -t rahiregistry.azurecr.io/rahi-app-image:${{ github.sha }} .
-          docker push rahiregistry.azurecr.io/rahi-app-image:${{ github.sha }}
-
-      # 7. Set AKS context
-      - name: Set AKS Context
-        uses: azure/aks-set-context@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-          cluster-name: RahiCluster
-          resource-group: rahi-resource
-
-      # 8. Apply Kubernetes YAML
-      - name: Deploy base manifests
-        run: |
-          kubectl apply -f k8s/deployment.yaml
-          kubectl apply -f k8s/service.yaml
-          kubectl apply -f k8s/hpa.yaml
-
-      # 9. Update image (dynamic)
-      - name: Update image in AKS
-        run: |
-          kubectl set image deployment/rahiapp-deployment \
-          rahiapp=rahiregistry.azurecr.io/rahi-app-image:${{ github.sha }}
-
-      # 10. Verify rollout
-      - name: Check rollout status
-        run: |
-          kubectl rollout status deployment/rahiapp-deployment --timeout=120s
-
-      # 11. Auto rollback if failed
-      - name: Rollback if deployment fails
-        if: failure()
-        run: |
-          echo "Deployment failed. Rolling back..."
-          kubectl rollout undo deployment/rahiapp-deployment
-
-      # 12. Verify rollback
-      - name: Verify rollback
-        if: failure()
-        run: |
-          kubectl rollout status deployment/rahiapp-deployment --timeout=120s
+          docker build -t interviewresgistry.azurecr.io/interview-app-image:${{ github.sha }} .
+          docker push interviewresgistry.azurecr.io/interview-app-image:${{ github.sha }}
