@@ -11,5 +11,7 @@ az ad sp create-for-rbac \
 # AKS cluster node 
     search and set node as min 2, max 3
     D2ds_v4
+    
+# go to container registry and access control(IAM), add role, select member as kubernetes cluster by selecting manual radio btn.
 
 ```
