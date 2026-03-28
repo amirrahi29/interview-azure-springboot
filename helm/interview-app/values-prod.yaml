@@ -1,0 +1,22 @@
+replicaCount: 3
+
+image:
+  repository: interviewresgistry.azurecr.io/interview-app-image
+  tag: latest
+
+service:
+  type: LoadBalancer
+  port: 80
+
+hpa:
+  enabled: true
+  min: 3
+  max: 6
+
+resources:
+  requests:
+    cpu: "200m"
+    memory: "256Mi"
+  limits:
+    cpu: "1000m"
+    memory: "1024Mi"

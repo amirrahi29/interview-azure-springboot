@@ -3,9 +3,11 @@ name: Build and Deploy to AKS
 on:
   push:
     branches:
-      - "main"
+      - dev
+      - staging
+      - uat
+      - main
 
-# only single deployment will happen at a time, rest will cancel
 concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: true
@@ -39,16 +41,29 @@ jobs:
 
       # 5. ACR Login
       - name: Login to ACR
-        run: |
-          az acr login --name InterviewResgistry
+        run: az acr login --name InterviewResgistry
 
       # 6. Build & Push Docker image
       - name: Build and Push Docker Image
         run: |
           docker build -t interviewresgistry.azurecr.io/interview-app-image:${{ github.sha }} .
           docker push interviewresgistry.azurecr.io/interview-app-image:${{ github.sha }}
-          
-      # 7. Set AKS context
+
+      # 7. ENV AUTO DETECT
+      - name: Set Environment
+        run: |
+          BRANCH=${GITHUB_REF##*/}
+          if [ "$BRANCH" = "dev" ]; then
+            echo "ENV=dev" >> $GITHUB_ENV
+          elif [ "$BRANCH" = "staging" ]; then
+            echo "ENV=staging" >> $GITHUB_ENV
+          elif [ "$BRANCH" = "uat" ]; then
+            echo "ENV=uat" >> $GITHUB_ENV
+          else
+            echo "ENV=prod" >> $GITHUB_ENV
+          fi
+
+      # 8. Set AKS context
       - name: Set AKS Context
         uses: azure/aks-set-context@v1
         with:
@@ -56,26 +71,29 @@ jobs:
           cluster-name: InterviewCluster
           resource-group: interview-resources
 
-      # 8. Deploy using Helm
+      # 9. Helm Deploy (ENV BASED)
       - name: Deploy with Helm
         run: |
-          helm upgrade --install interviewapp ./helm/interview-app \
-            --set image.tag=${{ github.sha }}
+          helm upgrade --install interviewapp-${ENV} ./helm/interview-app \
+            -f helm/interview-app/values-${ENV}.yaml \
+            --set image.tag=${{ github.sha }} \
+            --namespace ${ENV} --create-namespace
 
-      # 9. Verify rollout
+      # 10. Verify rollout
       - name: Check rollout status
         run: |
-          kubectl rollout status deployment/interviewapp-deployment --timeout=120s
+          kubectl rollout status deployment/interviewapp-deployment \
+            --namespace ${ENV} --timeout=120s
 
-      # 10. Rollback if deployment fails
+      # 11. Rollback if deployment fails
       - name: Rollback if deployment fails
         if: failure()
         run: |
-          echo "Deployment failed. Rolling back..."
-          helm rollback interviewapp
+          helm rollback interviewapp-${ENV} --namespace ${ENV}
 
-      # 11. Verify rollback
+      # 12. Verify rollback
       - name: Verify rollback
         if: failure()
         run: |
-          kubectl rollout status deployment/interviewapp-deployment --timeout=120s
+          kubectl rollout status deployment/interviewapp-deployment \
+            --namespace ${ENV} --timeout=120s

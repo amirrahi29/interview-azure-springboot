@@ -1,0 +1,26 @@
+replicaCount: 1
+
+env: dev
+
+image:
+  repository: interviewresgistry.azurecr.io/interview-app-image
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 80
+
+containerPort: 8083
+
+hpa:
+  enabled: false
+  min: 1
+  max: 2
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
