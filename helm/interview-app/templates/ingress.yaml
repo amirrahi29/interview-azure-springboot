@@ -3,6 +3,8 @@ kind: Ingress
 metadata:
   name: interviewapp-ingress
   namespace: {{ .Values.env }}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
 
 spec:
   ingressClassName: nginx
