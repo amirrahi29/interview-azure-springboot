@@ -118,14 +118,44 @@ jobs:
           cluster-name: ${{ env.AKS_CLUSTER_NAME }}
           resource-group: ${{ env.AKS_RESOURCE_GROUP }}
 
-      - name: Check NGINX Ingress controller
+      # Fail if the API server's nginx Ingress webhook points at a Service that does not exist
+      # (a loose *admission* grep is not enough: webhook may still reference an old release name).
+      - name: Check NGINX Ingress admission webhook
         run: |
           set -euo pipefail
-          if ! kubectl get svc -n ingress-nginx -o name 2>/dev/null | grep -q admission; then
-            echo "::error::No *admission* Service in namespace ingress-nginx. Install ingress-nginx, e.g.:"
-            echo "helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx"
-            echo "helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx -n ingress-nginx --create-namespace"
+          BAD=0
+          while read -r VWC NS SVC; do
+            [ -z "${VWC:-}" ] && continue
+            if kubectl get svc -n "$NS" "$SVC" &>/dev/null; then
+              echo "OK: webhook target exists: $NS/$SVC (ValidatingWebhookConfiguration/$VWC)"
+            else
+              echo "::error::Ingress admission webhook is broken: $VWC → Service $NS/$SVC not found."
+              BAD=1
+            fi
+          done < <(kubectl get validatingwebhookconfiguration -o json | jq -r '
+            .items[] as $vwc |
+            $vwc.webhooks[]? |
+            select(.name == "validate.nginx.ingress.kubernetes.io" and (.clientConfig.service != null)) |
+            "\($vwc.metadata.name) \(.clientConfig.service.namespace) \(.clientConfig.service.name)"
+          ' | sort -u)
+
+          if [ "$BAD" -ne 0 ]; then
+            echo "::error::Fix on the cluster (run as admin): align ingress-nginx with the webhook, or reinstall the chart."
+            echo "::error::Example: helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx && helm repo update"
+            echo "::error::Then: helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx -n ingress-nginx --create-namespace"
+            echo "::error::If the release name was different before, delete the stale ValidatingWebhookConfiguration or upgrade the same release that created it."
+            kubectl get svc -n ingress-nginx -o wide 2>/dev/null || true
             exit 1
+          fi
+
+          # No nginx ingress webhook registered — still require some controller in ingress-nginx
+          WC=$(kubectl get validatingwebhookconfiguration -o json | jq '[.items[].webhooks[]? | select(.name == "validate.nginx.ingress.kubernetes.io")] | length')
+          if [ "${WC:-0}" -eq 0 ]; then
+            if ! kubectl get svc -n ingress-nginx -o name 2>/dev/null | grep -qE 'controller|ingress'; then
+              echo "::error::No validate.nginx.ingress.kubernetes.io webhook and no obvious ingress-nginx Service in namespace ingress-nginx."
+              exit 1
+            fi
+            echo "::notice::No nginx ingress validating webhook found; at least one ingress-nginx Service exists — deploy may still fail if a webhook appears later."
           fi
 
       - name: Deploy with Helm
