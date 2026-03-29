@@ -1,6 +1,9 @@
 replicaCount: 3
 env: prod
 
+# 👇 different host
+host: prod.interview.com
+
 image:
   repository: interviewresgistry.azurecr.io/interview-app-image
   tag: ""
@@ -10,7 +13,6 @@ service:
   port: 80
 
 hpa:
-  enabled: true
   min: 3
   max: 6
 

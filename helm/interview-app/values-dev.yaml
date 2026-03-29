@@ -1,6 +1,9 @@
 replicaCount: 1
 env: dev
 
+# 👇 NEW
+host: dev.interview.com
+
 image:
   repository: interviewresgistry.azurecr.io/interview-app-image
   tag: ""

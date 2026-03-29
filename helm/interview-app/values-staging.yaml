@@ -1,6 +1,9 @@
 replicaCount: 2
 env: staging
 
+# 👇 NEW
+host: staging.interview.com
+
 image:
   repository: interviewresgistry.azurecr.io/interview-app-image
   tag: ""

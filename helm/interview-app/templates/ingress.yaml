@@ -1,14 +1,15 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: interviewapp-ingress
+  name: interviewapp-ingress-{{ .Values.env }}
   namespace: {{ .Values.env }}
 
 spec:
   ingressClassName: nginx
 
   rules:
-    - http:
+    - host: {{ .Values.host }}
+      http:
         paths:
           - path: /
             pathType: Prefix

@@ -90,4 +90,6 @@ az ad sp create-for-rbac \
 # to get ingress ip 
     kubectl get svc -n ingress-nginx
          
+# delete ingresses
+     kubectl delete ingress --all -A
 ```

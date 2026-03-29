@@ -1,6 +1,10 @@
 replicaCount: 2
 containerPort: 8083
+
 env: dev   # default (override hoga env files se)
+
+# 👇 NEW (IMPORTANT)
+host: dev.interview.com
 
 image:
   repository: interviewresgistry.azurecr.io/interview-app-image

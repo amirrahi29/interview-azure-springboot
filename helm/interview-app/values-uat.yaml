@@ -1,6 +1,9 @@
 replicaCount: 2
 env: uat
 
+# 👇 NEW
+host: uat.interview.com
+
 image:
   repository: interviewresgistry.azurecr.io/interview-app-image
   tag: ""
