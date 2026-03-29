@@ -1,5 +1,6 @@
 replicaCount: 2
-env: uat
+env: dev
+host: interview-uat.local
 
 image:
   repository: interviewresgistry.azurecr.io/interview-app-image

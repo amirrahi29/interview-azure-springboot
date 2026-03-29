@@ -1,5 +1,6 @@
 replicaCount: 2
-env: staging
+env: dev
+host: interview-staging.local
 
 image:
   repository: interviewresgistry.azurecr.io/interview-app-image

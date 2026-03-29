@@ -1,5 +1,6 @@
 replicaCount: 1
 env: dev
+host: interview-dev.local
 
 image:
   repository: interviewresgistry.azurecr.io/interview-app-image
