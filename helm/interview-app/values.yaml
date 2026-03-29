@@ -1,7 +1,7 @@
 replicaCount: 2
 
 image:
-  repository: interviewregistry.azurecr.io/interview-app-image
+  repository: interviewresgistry.azurecr.io/interview-app-image
   tag: latest
 
 service:
