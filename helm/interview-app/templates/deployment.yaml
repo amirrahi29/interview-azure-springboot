@@ -24,16 +24,23 @@ spec:
     metadata:
       labels:
         app: interviewapp
+        env: {{ .Values.env }}
 
     spec:
       containers:
         - name: interviewapp
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
 
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
 
           ports:
-            - containerPort: 8083
+            - containerPort: {{ .Values.containerPort }}
+
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "{{ .Values.env }}"
+            - name: APP_ENV
+              value: "{{ .Values.env }}"
 
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
@@ -41,21 +48,21 @@ spec:
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
-              port: 8083
+              port: {{ .Values.containerPort }}
             initialDelaySeconds: 10
             periodSeconds: 10
 
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
-              port: 8083
+              port: {{ .Values.containerPort }}
             initialDelaySeconds: 15
             periodSeconds: 20
 
           startupProbe:
             httpGet:
               path: /actuator/health
-              port: 8083
+              port: {{ .Values.containerPort }}
             failureThreshold: 30
             periodSeconds: 5
 

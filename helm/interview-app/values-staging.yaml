@@ -1,8 +1,9 @@
 replicaCount: 2
+env: staging
 
 image:
   repository: interviewresgistry.azurecr.io/interview-app-image
-  tag: latest
+  tag: ""
 
 service:
   type: ClusterIP

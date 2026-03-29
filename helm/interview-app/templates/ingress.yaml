@@ -16,4 +16,4 @@ spec:
               service:
                 name: interview-app-service
                 port:
-                  number: 80
+                  number: {{ .Values.service.port }}
