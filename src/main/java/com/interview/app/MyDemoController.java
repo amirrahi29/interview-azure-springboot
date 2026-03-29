@@ -1,14 +1,25 @@
 package com.interview.app;
 
+import org.springframework.core.env.Environment;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 public class MyDemoController {
 
+    private final Environment environment;
+
+    public MyDemoController(Environment environment) {
+        this.environment = environment;
+    }
+
     // Root endpoint
     @GetMapping("/")
     public String home() {
-        return "Welcome to Interview App 🚀";
+
+        String[] profiles = environment.getActiveProfiles();
+        String env = profiles.length > 0 ? profiles[0] : "LOCAL";
+
+        return "Welcome to Interview "+env+" App";
     }
 
     // API base
