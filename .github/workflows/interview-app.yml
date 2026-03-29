@@ -143,9 +143,21 @@ jobs:
             echo "::error::Fix on the cluster (run as admin): align ingress-nginx with the webhook, or reinstall the chart."
             echo "::error::Example: helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx && helm repo update"
             echo "::error::Then: helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx -n ingress-nginx --create-namespace"
-            echo "::error::If the release name was different before, delete the stale ValidatingWebhookConfiguration or upgrade the same release that created it."
+            echo "::error::Common AKS leftover: two releases over time → duplicate VWCs. If one Service is missing, delete the stale VWC, e.g.:"
+            echo "::error::  kubectl delete validatingwebhookconfiguration nginx-ingress-nginx-admission"
             kubectl get svc -n ingress-nginx -o wide 2>/dev/null || true
             exit 1
+          fi
+
+          # More than one VWC for the same webhook name = double validation / easy to break later; warn if still multiple after fixes
+          VWC_ROWS=$(kubectl get validatingwebhookconfiguration -o json | jq -r '
+            .items[] as $vwc |
+            $vwc.webhooks[]? |
+            select(.name == "validate.nginx.ingress.kubernetes.io" and (.clientConfig.service != null)) |
+            "\($vwc.metadata.name)"
+          ' | sort -u | wc -l | tr -d "[:space:]")
+          if [ "${VWC_ROWS:-0}" -gt 1 ]; then
+            echo "::warning::Multiple ValidatingWebhookConfigurations register validate.nginx.ingress.kubernetes.io (${VWC_ROWS}). Prefer a single ingress-nginx install to avoid admission failures."
           fi
 
           # No nginx ingress webhook registered — still require some controller in ingress-nginx
@@ -181,7 +193,8 @@ jobs:
         run: |
           SLUG="${{ needs.build.outputs.deploy_slug }}"
           REL="${{ env.HELM_RELEASE_PREFIX }}-${SLUG}"
-          helm rollback "$REL" --namespace "$SLUG" || true
+          # --wait surfaces rollout issues; PDB messages during rollback can still appear across Helm revisions — || true avoids failing the job twice
+          helm rollback "$REL" --namespace "$SLUG" --wait --timeout 8m || true
 
       - name: Verify rollback
         if: failure()
