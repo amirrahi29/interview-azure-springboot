@@ -1,0 +1,60 @@
+{
+    "apiVersion": "v1",
+    "kind": "Namespace",
+    "metadata": {
+        "creationTimestamp": "2026-03-28T21:03:10Z",
+        "deletionTimestamp": "2026-03-29T06:56:13Z",
+        "labels": {
+            "kubernetes.io/metadata.name": "ingress-nginx",
+            "name": "ingress-nginx"
+        },
+        "name": "ingress-nginx",
+        "resourceVersion": "250376",
+        "uid": "79e1f70e-15ef-411d-a90b-5dde5e6d6ac8"
+    },
+    "spec": {
+        "finalizers": [
+            "kubernetes"
+        ]
+    },
+    "status": {
+        "conditions": [
+            {
+                "lastTransitionTime": "2026-03-29T06:56:18Z",
+                "message": "All resources successfully discovered",
+                "reason": "ResourcesDiscovered",
+                "status": "False",
+                "type": "NamespaceDeletionDiscoveryFailure"
+            },
+            {
+                "lastTransitionTime": "2026-03-29T06:56:18Z",
+                "message": "All legacy kube types successfully parsed",
+                "reason": "ParsedGroupVersions",
+                "status": "False",
+                "type": "NamespaceDeletionGroupVersionParsingFailure"
+            },
+            {
+                "lastTransitionTime": "2026-03-29T06:56:18Z",
+                "message": "All content successfully deleted, may be waiting on finalization",
+                "reason": "ContentDeleted",
+                "status": "False",
+                "type": "NamespaceDeletionContentFailure"
+            },
+            {
+                "lastTransitionTime": "2026-03-29T06:58:55Z",
+                "message": "Some resources are remaining: services. has 1 resource instances",
+                "reason": "SomeResourcesRemain",
+                "status": "True",
+                "type": "NamespaceContentRemaining"
+            },
+            {
+                "lastTransitionTime": "2026-03-29T06:58:55Z",
+                "message": "Some content in the namespace has finalizers remaining: service.kubernetes.io/load-balancer-cleanup in 1 resource instances",
+                "reason": "SomeFinalizersRemain",
+                "status": "True",
+                "type": "NamespaceFinalizersRemaining"
+            }
+        ],
+        "phase": "Terminating"
+    }
+}
