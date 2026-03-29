@@ -1,11 +1,11 @@
 replicaCount: 2
 
 image:
-  repository: interviewresgistry.azurecr.io/interview-app-image
+  repository: interviewregistry.azurecr.io/interview-app-image
   tag: latest
 
 service:
-  type: LoadBalancer
+  type: ClusterIP
   port: 80
 
 resources:
