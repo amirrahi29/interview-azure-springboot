@@ -13,5 +13,5 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      {{- include "interview-app.selectorLabels" . | nindent 6 }}
+      {{- include "interview-app.matchLabels" . | nindent 6 }}
 {{- end }}

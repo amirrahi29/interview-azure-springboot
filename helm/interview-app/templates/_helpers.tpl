@@ -25,20 +25,28 @@ Chart label for tooling (Argo, monitoring).
 {{- end }}
 
 {{/*
-Selector labels — must match between Deployment template and Service.
+Immutable selector — must stay stable across Helm upgrades (Deployment.spec.selector cannot change).
+Keep only the legacy key used by the first revision of this chart.
 */}}
-{{- define "interview-app.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "interview-app.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
+{{- define "interview-app.matchLabels" -}}
 app: interviewapp
 {{- end }}
 
 {{/*
-Common labels on all resources.
+Pod (and Service) routing labels — extra keys live here only on the pod template, not in Deployment.selector.
+*/}}
+{{- define "interview-app.podLabels" -}}
+{{ include "interview-app.matchLabels" . }}
+app.kubernetes.io/name: {{ include "interview-app.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{/*
+Common labels on all resources (metadata only).
 */}}
 {{- define "interview-app.labels" -}}
 helm.sh/chart: {{ include "interview-app.chart" . }}
-{{ include "interview-app.selectorLabels" . }}
+{{ include "interview-app.podLabels" . }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 environment: {{ .Values.env | quote }}

@@ -18,11 +18,11 @@ spec:
       maxSurge: {{ .Values.deployment.rollingUpdate.maxSurge }}
   selector:
     matchLabels:
-      {{- include "interview-app.selectorLabels" . | nindent 6 }}
+      {{- include "interview-app.matchLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "interview-app.selectorLabels" . | nindent 8 }}
+        {{- include "interview-app.podLabels" . | nindent 8 }}
         env: {{ .Values.env | quote }}
       {{- with .Values.podAnnotations }}
       annotations:
@@ -60,7 +60,7 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
                 matchLabels:
-                  {{- include "interview-app.selectorLabels" . | nindent 18 }}
+                  {{- include "interview-app.podLabels" . | nindent 18 }}
               topologyKey: {{ .Values.podAntiAffinity.topologyKey | quote }}
           {{- else }}
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -68,7 +68,7 @@ spec:
               podAffinityTerm:
                 labelSelector:
                   matchLabels:
-                    {{- include "interview-app.selectorLabels" . | nindent 20 }}
+                    {{- include "interview-app.podLabels" . | nindent 20 }}
                 topologyKey: {{ .Values.podAntiAffinity.topologyKey | quote }}
           {{- end }}
       {{- end }}
