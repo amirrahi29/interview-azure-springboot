@@ -8,6 +8,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 public class MyDemoController {
 
+    @GetMapping("/")
+    public String root(){
+        return "welcome home production";
+    }
+
     @GetMapping("/test")
     public String data(){
         return "my test data controller amir rahi production branch";
