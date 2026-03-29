@@ -25,18 +25,28 @@ public class MyDemoController {
     // API base
     @GetMapping("/api")
     public String apiRoot() {
-        return "API Root working";
+        String[] profiles = environment.getActiveProfiles();
+        String env = profiles.length > 0 ? profiles[0] : "LOCAL";
+        return "API Root working: "+env;
     }
 
     // Specific API
     @GetMapping("/api/test")
     public String test() {
-        return "my test data controller amir rahi production branch";
+
+        String[] profiles = environment.getActiveProfiles();
+        String env = profiles.length > 0 ? profiles[0] : "LOCAL";
+
+        return "my test data controller amir rahi "+env+" branch";
     }
 
     // Another example
     @GetMapping("/hello")
     public String hello() {
-        return "Hello endpoint working";
+
+        String[] profiles = environment.getActiveProfiles();
+        String env = profiles.length > 0 ? profiles[0] : "LOCAL";
+
+        return "Hello endpoint working: "+env;
     }
 }
