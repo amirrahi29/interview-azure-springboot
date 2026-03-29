@@ -1,27 +1,117 @@
+# -----------------------------------------------------------------------------
+# Base values — override per environment via values-<env>.yaml (dev|staging|uat|prod)
+# -----------------------------------------------------------------------------
+
+nameOverride: ""
+fullnameOverride: ""
+
+environment:
+  name: dev
+  tier: non-production
+
+deployment:
+  name: interviewapp-deployment
+  revisionHistoryLimit: 5
+  terminationGracePeriodSeconds: 30
+  preStopSleepSeconds: 10
+  annotations: {}
+  rollingUpdate:
+    maxUnavailable: 1
+    maxSurge: 1
+
 replicaCount: 2
 containerPort: 8083
 
-env: dev   # default (override hoga env files se)
+env: dev
 
-# 👇 NEW (IMPORTANT)
 host: dev.interview.com
 
 image:
   repository: interviewresgistry.azurecr.io/interview-app-image
-  tag: ""   # CI/CD set karega
+  tag: ""
+  pullPolicy: Always
+  pullSecrets: []
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  automountToken: true
+
+podAnnotations: {}
+podSecurityContext: {}
+
+securityContext: {}
+
+extraEnv: []
 
 service:
+  name: interview-app-service
   type: ClusterIP
   port: 80
+  targetPort: null
+  annotations: {}
 
 resources:
   requests:
-    cpu: "100m"
-    memory: "128Mi"
+    cpu: 100m
+    memory: 128Mi
   limits:
-    cpu: "500m"
-    memory: "512Mi"
+    cpu: 500m
+    memory: 512Mi
+
+probes:
+  readiness:
+    path: /actuator/health/readiness
+    port: null
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  liveness:
+    path: /actuator/health/liveness
+    port: null
+    initialDelaySeconds: 15
+    periodSeconds: 20
+  startup:
+    path: /actuator/health
+    port: null
+    failureThreshold: 30
+    periodSeconds: 5
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+podAntiAffinity:
+  enabled: false
+  type: preferred
+  weight: 100
+  topologyKey: topology.kubernetes.io/zone
+
+ingress:
+  enabled: true
+  className: nginx
+  extraAnnotations: {}
+  tls:
+    enabled: false
+    secretName: ""
 
 hpa:
+  enabled: true
   min: 2
   max: 5
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30
+    scaleDown:
+      stabilizationWindowSeconds: 60
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+pdb:
+  enabled: true
+  minAvailable: 1

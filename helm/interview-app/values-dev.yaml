@@ -1,7 +1,10 @@
+# Development — lowest cost, single replica, no HPA/PDB noise
+environment:
+  name: development
+  tier: non-production
+
 replicaCount: 1
 env: dev
-
-# 👇 NEW
 host: dev.interview.com
 
 image:
@@ -14,15 +17,26 @@ service:
 
 containerPort: 8083
 
+ingress:
+  enabled: true
+  className: nginx
+  extraAnnotations: {}
+
 hpa:
   enabled: false
   min: 1
   max: 2
 
+pdb:
+  enabled: false
+
+podAntiAffinity:
+  enabled: false
+
 resources:
   requests:
-    cpu: "100m"
-    memory: "128Mi"
+    cpu: 100m
+    memory: 128Mi
   limits:
-    cpu: "500m"
-    memory: "512Mi"
+    cpu: 500m
+    memory: 512Mi

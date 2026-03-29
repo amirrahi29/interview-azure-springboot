@@ -1,7 +1,10 @@
+# Staging — integration / pre-UAT, mirrors prod topology lightly
+environment:
+  name: staging
+  tier: non-production
+
 replicaCount: 2
 env: staging
-
-# 👇 NEW
 host: staging.interview.com
 
 image:
@@ -12,15 +15,28 @@ service:
   type: ClusterIP
   port: 80
 
+ingress:
+  enabled: true
+  className: nginx
+
 hpa:
   enabled: true
   min: 2
   max: 3
 
+pdb:
+  enabled: true
+  minAvailable: 1
+
+podAntiAffinity:
+  enabled: true
+  type: preferred
+  topologyKey: topology.kubernetes.io/zone
+
 resources:
   requests:
-    cpu: "100m"
-    memory: "128Mi"
+    cpu: 100m
+    memory: 128Mi
   limits:
-    cpu: "500m"
-    memory: "512Mi"
+    cpu: 500m
+    memory: 512Mi

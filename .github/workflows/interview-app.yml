@@ -1,0 +1,161 @@
+# Multi-environment CD: branch → dev | staging | uat | prod (main).
+# GitHub Environments: development, staging, uat, production — use them for
+# environment-scoped secrets and production protection rules (required reviewers).
+name: Build and Deploy to AKS
+
+on:
+  push:
+    branches:
+      - dev
+      - staging
+      - uat
+      - main
+  workflow_dispatch:
+    inputs:
+      deploy_environment:
+        description: Target slug (namespace + values-{slug}.yaml)
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - uat
+          - prod
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HELM_RELEASE_PREFIX: interviewapp
+  AKS_CLUSTER_NAME: InterviewCluster
+  AKS_RESOURCE_GROUP: interview-resources
+  ACR_NAME: InterviewResgistry
+  DEPLOYMENT_NAME: interviewapp-deployment
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ github.sha }}
+      deploy_slug: ${{ steps.meta.outputs.deploy_slug }}
+      github_environment: ${{ steps.meta.outputs.github_environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve environment
+        id: meta
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SLUG="${{ github.event.inputs.deploy_environment }}"
+          else
+            case "${GITHUB_REF##*/}" in
+              dev) SLUG=dev ;;
+              staging) SLUG=staging ;;
+              uat) SLUG=uat ;;
+              main) SLUG=prod ;;
+              *)
+                echo "::error::Branch is not mapped to a deployment environment."
+                exit 1
+                ;;
+            esac
+          fi
+          echo "deploy_slug=$SLUG" >> "$GITHUB_OUTPUT"
+          case "$SLUG" in
+            dev) echo "github_environment=development" >> "$GITHUB_OUTPUT" ;;
+            staging) echo "github_environment=staging" >> "$GITHUB_OUTPUT" ;;
+            uat) echo "github_environment=uat" >> "$GITHUB_OUTPUT" ;;
+            prod) echo "github_environment=production" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "::error::Unknown deploy slug: $SLUG"
+              exit 1
+              ;;
+          esac
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: gradle
+
+      - name: Build with Gradle
+        run: ./gradlew build
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to ACR
+        run: az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Build and push Docker image
+        run: |
+          IMG=interviewresgistry.azurecr.io/interview-app-image:${{ github.sha }}
+          docker build -t "$IMG" .
+          docker push "$IMG"
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: ${{ needs.build.outputs.github_environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set AKS context
+        uses: azure/aks-set-context@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          cluster-name: ${{ env.AKS_CLUSTER_NAME }}
+          resource-group: ${{ env.AKS_RESOURCE_GROUP }}
+
+      - name: Check NGINX Ingress controller
+        run: |
+          set -euo pipefail
+          if ! kubectl get svc -n ingress-nginx -o name 2>/dev/null | grep -q admission; then
+            echo "::error::No *admission* Service in namespace ingress-nginx. Install ingress-nginx, e.g.:"
+            echo "helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx"
+            echo "helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx -n ingress-nginx --create-namespace"
+            exit 1
+          fi
+
+      - name: Deploy with Helm
+        run: |
+          SLUG="${{ needs.build.outputs.deploy_slug }}"
+          REL="${{ env.HELM_RELEASE_PREFIX }}-${SLUG}"
+          helm upgrade --install "$REL" ./helm/interview-app \
+            -f "helm/interview-app/values-${SLUG}.yaml" \
+            --set image.tag="${{ needs.build.outputs.image_tag }}" \
+            --namespace "$SLUG" \
+            --create-namespace \
+            --wait \
+            --timeout 10m
+
+      - name: Check rollout status
+        run: |
+          kubectl rollout status "deployment/${{ env.DEPLOYMENT_NAME }}" \
+            --namespace "${{ needs.build.outputs.deploy_slug }}" \
+            --timeout=300s
+
+      - name: Rollback if deployment fails
+        if: failure()
+        run: |
+          SLUG="${{ needs.build.outputs.deploy_slug }}"
+          REL="${{ env.HELM_RELEASE_PREFIX }}-${SLUG}"
+          helm rollback "$REL" --namespace "$SLUG" || true
+
+      - name: Verify rollback
+        if: failure()
+        run: |
+          kubectl rollout status "deployment/${{ env.DEPLOYMENT_NAME }}" \
+            --namespace "${{ needs.build.outputs.deploy_slug }}" \
+            --timeout=300s

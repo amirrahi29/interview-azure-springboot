@@ -1,74 +1,119 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: interviewapp-deployment
+  name: {{ include "interview-app.deploymentName" . }}
   labels:
-    app: interviewapp
-
+    {{- include "interview-app.labels" . | nindent 4 }}
+  {{- with .Values.deployment.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   replicas: {{ .Values.replicaCount }}
-
-  revisionHistoryLimit: 5
-
+  revisionHistoryLimit: {{ .Values.deployment.revisionHistoryLimit }}
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 1
-      maxSurge: 1
-
+      maxUnavailable: {{ .Values.deployment.rollingUpdate.maxUnavailable }}
+      maxSurge: {{ .Values.deployment.rollingUpdate.maxSurge }}
   selector:
     matchLabels:
-      app: interviewapp
-
+      {{- include "interview-app.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app: interviewapp
-        env: {{ .Values.env }}
-
+        {{- include "interview-app.selectorLabels" . | nindent 8 }}
+        env: {{ .Values.env | quote }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ .Values.serviceAccount.name | default (printf "%s-sa" .Release.Name) }}
+      {{- else if .Values.serviceAccount.name }}
+      serviceAccountName: {{ .Values.serviceAccount.name | quote }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.affinity }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}
+      {{- else if .Values.podAntiAffinity.enabled }}
+      affinity:
+        podAntiAffinity:
+          {{- if eq .Values.podAntiAffinity.type "required" }}
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  {{- include "interview-app.selectorLabels" . | nindent 18 }}
+              topologyKey: {{ .Values.podAntiAffinity.topologyKey | quote }}
+          {{- else }}
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: {{ .Values.podAntiAffinity.weight }}
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    {{- include "interview-app.selectorLabels" . | nindent 20 }}
+                topologyKey: {{ .Values.podAntiAffinity.topologyKey | quote }}
+          {{- end }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.deployment.terminationGracePeriodSeconds }}
       containers:
         - name: interviewapp
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-
-          imagePullPolicy: Always
-
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
-            - containerPort: {{ .Values.containerPort }}
-
+            - name: http
+              containerPort: {{ .Values.containerPort }}
+              protocol: TCP
           env:
             - name: SPRING_PROFILES_ACTIVE
-              value: "{{ .Values.env }}"
+              value: {{ .Values.env | quote }}
             - name: APP_ENV
-              value: "{{ .Values.env }}"
-
+              value: {{ .Values.env | quote }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-
           readinessProbe:
             httpGet:
-              path: /actuator/health/readiness
-              port: {{ .Values.containerPort }}
-            initialDelaySeconds: 10
-            periodSeconds: 10
-
+              path: {{ .Values.probes.readiness.path | quote }}
+              port: {{ .Values.probes.readiness.port | default .Values.containerPort }}
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
           livenessProbe:
             httpGet:
-              path: /actuator/health/liveness
-              port: {{ .Values.containerPort }}
-            initialDelaySeconds: 15
-            periodSeconds: 20
-
+              path: {{ .Values.probes.liveness.path | quote }}
+              port: {{ .Values.probes.liveness.port | default .Values.containerPort }}
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
           startupProbe:
             httpGet:
-              path: /actuator/health
-              port: {{ .Values.containerPort }}
-            failureThreshold: 30
-            periodSeconds: 5
-
+              path: {{ .Values.probes.startup.path | quote }}
+              port: {{ .Values.probes.startup.port | default .Values.containerPort }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
           lifecycle:
             preStop:
               exec:
-                command: ["sh", "-c", "sleep 10"]
-
-      terminationGracePeriodSeconds: 30
+                command: ["sh", "-c", "sleep {{ .Values.deployment.preStopSleepSeconds }}"]
